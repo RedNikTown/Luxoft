@@ -1,19 +1,26 @@
 package com.luxoft;
 
-import com.luxoft.convertor.Convertor;
-import com.luxoft.convertor.RowConvertor;
+import com.luxoft.agregator.TeamEffortDataAggregator;
+import com.luxoft.convertor.RawDataToEffortConvertor;
+import com.luxoft.model.Effort;
 import com.luxoft.parser.CsvParser;
 import com.luxoft.parser.Parser;
-import com.luxoft.writer.StdOutWriter;
-import com.luxoft.writer.Writer;
+import com.luxoft.writer.EffortStdOutWriter;
+
+import java.util.function.Consumer;
+import java.util.function.Function;
 
 public class Application {
     private final static String FILE_NAME = "src/main/resources/input-data.csv";
 
     public static void main(String[] args) {
-        Convertor<String[], String> convertor = new RowConvertor();
-        Writer<String[]> writer = new StdOutWriter(convertor::convert);
-        Parser parser = new CsvParser(writer::write);
+        Function<String[], Effort> rawDataToEffortConvertor = RawDataToEffortConvertor::convert;
+        TeamEffortDataAggregator teamEffortAggregator = new TeamEffortDataAggregator(rawDataToEffortConvertor);
+        Consumer<String[]> aggregateTeamEffortConsumer = teamEffortAggregator::aggregateTeamEffort;
+        Parser parser = new CsvParser(aggregateTeamEffortConsumer);
         parser.parse(FILE_NAME);
+
+        EffortStdOutWriter effortStdOutWriter = new EffortStdOutWriter();
+        effortStdOutWriter.write(teamEffortAggregator.getTeamEfforts());
     }
 }

@@ -1,13 +1,15 @@
 package com.luxoft.parser;
 
-import com.luxoft.writer.StdOutWriter;
-import com.luxoft.writer.Writer;
+import com.luxoft.agregator.TeamEffortDataAggregator;
+import com.luxoft.convertor.RawDataToEffortConvertor;
+import com.luxoft.model.Effort;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 import static org.junit.Assert.assertNotNull;
 
@@ -17,19 +19,20 @@ public class ParserTest {
 
     private final ByteArrayOutputStream outputStreamCaptor = new ByteArrayOutputStream();
 
-    private Consumer<String[]> consumer;
+    private Consumer<String[]> rawDataConsumer;
+    private TeamEffortDataAggregator teamEffortAggregator;
 
     @Before
     public void setUp() {
         System.setOut(new PrintStream(outputStreamCaptor));
-        Writer<String[]> writer = new StdOutWriter();
-        consumer = writer::write;
+        Function<String[], Effort> rawToEffortConvertor = RawDataToEffortConvertor::convert;
+        teamEffortAggregator = new TeamEffortDataAggregator(rawToEffortConvertor);
+        rawDataConsumer = teamEffortAggregator::aggregateTeamEffort;
     }
-
 
     @Test(expected = RuntimeException.class)
     public void exceptionIfNotFindFile() {
-        Parser parser = new CsvParser(consumer);
+        Parser parser = new CsvParser(rawDataConsumer);
         parser.parse("test");
     }
 
@@ -40,14 +43,14 @@ public class ParserTest {
 
     @Test(expected = NullPointerException.class)
     public void exceptionIfFileNameNull() {
-        Parser parser = new CsvParser(consumer);
+        Parser parser = new CsvParser(rawDataConsumer);
         parser.parse(null);
     }
 
     @Test
     public void checkThatConsumerWorks() {
-        Parser parser = new CsvParser(consumer);
+        Parser parser = new CsvParser(rawDataConsumer);
         parser.parse(FILE_NAME);
-        assertNotNull(outputStreamCaptor.toString().trim());
+        assertNotNull(teamEffortAggregator.getTeamEfforts());
     }
 }
